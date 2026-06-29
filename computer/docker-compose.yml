@@ -1,0 +1,128 @@
+# name: nuwax
+services:
+  # Agent Runner 镜像预拉取服务（用于 docker compose pull 预先拉取镜像）
+  # 此服务的唯一目的是让 docker compose pull 能够拉取 rcoder-computer-agent-runner 镜像
+  # 避免 agent-runner-image-puller 启动时需要执行 docker pull，导致执行时间过长
+  agent-runner-image-pre-pull:
+    image: nuwax-docker-images-registry.cn-hangzhou.cr.aliyuncs.com/nuwax/rcoder-computer-agent-runner:latest
+    labels:
+      - "com.docker.compose.project=agent-runner-image-pre-pull"
+      - "description=Agent Runner镜像预拉取服务，通过 docker compose pull 预先拉取镜像"
+    # 使用 true 命令让容器立即退出，不执行任何操作
+    command: ["true"]
+    restart: "no"
+    networks:
+      - agent-compouter-network
+
+  # Agent Runner 镜像预拉取并重新标记服务
+  agent-runner-image-puller:
+    image: nuwax-docker-images-registry.cn-hangzhou.cr.aliyuncs.com/nuwax/docker-cli:latest
+    labels:
+      - "com.docker.compose.project=agent-runner-image-puller"
+      - "description=Agent Runner镜像预拉取并重新标记为简短名称"
+    volumes:
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    environment:
+      - SOURCE_IMAGE=${DOCKER_REGISTRY:-nuwax-docker-images-registry.cn-hangzhou.cr.aliyuncs.com/nuwax}/rcoder-computer-agent-runner:latest
+      - LOCAL_TAG=rcoder-computer-agent-runner:latest
+      - RCODER_SOURCE_IMAGE=${DOCKER_REGISTRY:-nuwax-docker-images-registry.cn-hangzhou.cr.aliyuncs.com/nuwax}/rcoder:latest
+      - RCODER_LOCAL_TAG=rcoder:latest
+      # 是否强制拉取最新镜像：true=每次都拉取最新，false/不设置=本地已有则跳过
+      - FORCE_PULL=${FORCE_PULL:-false}
+    command: |
+      sh -c '
+      pull_if_needed() {
+        local image="$$1"
+        local force="$$2"
+        if [ "$$force" = "true" ]; then
+          echo "🔄 强制拉取镜像: $$image"
+          docker pull $$image
+          echo "✅ 镜像拉取完成"
+        elif docker image inspect $$image > /dev/null 2>&1; then
+          echo "⏭️  本地已存在镜像 $$image，跳过拉取"
+        else
+          echo "🔄 本地未找到镜像，开始拉取: $$image"
+          docker pull $$image
+          echo "✅ 镜像拉取完成"
+        fi
+      }
+
+      ensure_tag() {
+        local source="$$1"
+        local tag="$$2"
+        if docker image inspect $$tag > /dev/null 2>&1; then
+          echo "⏭️  标签 $$tag 已存在，跳过"
+        else
+          echo "🏷️  创建本地标签: $$tag"
+          docker tag $$source $$tag
+          echo "✅ 标签创建完成"
+        fi
+      }
+
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "📦 Agent Runner 镜像准备"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      pull_if_needed "$$SOURCE_IMAGE" "$$FORCE_PULL"
+      ensure_tag "$$SOURCE_IMAGE" "$$LOCAL_TAG"
+
+      echo ""
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "📦 RCoder 镜像准备"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      pull_if_needed "$$RCODER_SOURCE_IMAGE" "$$FORCE_PULL"
+      ensure_tag "$$RCODER_SOURCE_IMAGE" "$$RCODER_LOCAL_TAG"
+
+      echo ""
+      echo "✨ 所有镜像准备就绪！"
+      '
+    restart: "no"
+    networks:
+      - agent-compouter-network
+
+  rcoder:
+    image: nuwax-docker-images-registry.cn-hangzhou.cr.aliyuncs.com/nuwax/rcoder:latest
+    ports:
+      - "9086:${RCODER_PORT:-8086}"
+      - "60001:60000"
+      - "9088:8088"
+      - "9099:80"
+    environment:
+      - TZ=Asia/Shanghai
+      - RCODER_PORT=${RCODER_PORT:-8086}
+      # 🎯 关键：获取docker sock,用于检测宿主机路径
+      - DOCKER_SOCKET_PATH=${DOCKER_SOCKET_PATH:-/var/run/docker.sock}
+    volumes:
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - ./logs/rcoder:/app/logs
+      - ./config/rcoder/config.yml:/app/config.yml:ro
+      - ./config/rcoder/sub_app_multi_apps.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./config/nginx/custom/404.html:/usr/share/nginx/custom/404.html:ro
+      - ./config/nginx/custom/502.html:/usr/share/nginx/custom/502.html:ro
+      - ./project_workspace:/app/project_workspace
+      - ./project_zips:/app/project_zips
+      - ./project_nginx:/app/project_nginx
+      - ./config/rcoder/react-vite-template.zip:/app/project_init/react-vite-template.zip
+      # 挂载 rcoder-agent-runner 目录,给agent_runner使用,如果需要复写agent_runner的启动脚本的话
+      - ./config/rcoder/rcoder-agent-runner:/app/rcoder-agent-runner
+      - ./computer-project-workspace:/app/computer-project-workspace
+      # 专门用于npm,pnpm,bun,uvx 缓存使用的目录
+      - ./computer-cache:/root/.cache
+        # 🖼️ 挂载壁纸目录（供 agent_runner 子容器使用）
+      - ./config/rcoder/wallpaper:/app/assets
+    entrypoint: ["sh", "-c", "rm -f /run/dbus/pid /var/run/dbus/pid /tmp/dbus-* /var/run/supervisor.sock; rm -rf /run/user/*; exec /bin/bash /app/start-services.sh"]
+    healthcheck:
+      test:
+        ["CMD", "curl", "-f", "http://localhost:${RCODER_PORT:-8086}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: always
+    networks:
+      - agent-compouter-network
+
+networks:
+  agent-compouter-network:
+    driver: bridge
+    # 简化网络配置，解决"numerical result out of range"错误
+    enable_ipv6: false

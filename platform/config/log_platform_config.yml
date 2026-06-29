@@ -1,0 +1,6 @@
+server:
+  port: 8097
+  log_path: /app/logs
+
+quickwit:
+  url: http://quickwit:7280

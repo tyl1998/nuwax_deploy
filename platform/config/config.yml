@@ -1,0 +1,17 @@
+server:
+  port: 8088
+  # 日志输出文件路径
+  log_path: /web/logs/app
+  #数据库连接
+  db_url: postgres://postgres:postgres@localhost:5432/chat
+  base_dir: /web/chat_server
+# jwt认知公私钥
+auth:
+  sk: |
+    -----BEGIN PRIVATE KEY-----
+    MC4CAQAwBQYDK2VwBCIEIDnxJGEJGoW+mNKHn4vRY1V6BQ3MglSQSuZ8featmyC4
+    -----END PRIVATE KEY-----
+  pk: |
+    -----BEGIN PUBLIC KEY-----
+    MCowBQYDK2VwAyEAfM+lwNHj6TRJ3EGP38lIJcOo9Dlt2u2JzcwWMbu7jQY=
+    -----END PUBLIC KEY-----

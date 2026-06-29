@@ -1,0 +1,8 @@
+# Extra config to override default milvus.yaml 
+
+log:
+  file:
+    rootPath: /var/log/milvus
+    maxSize: 300
+    maxAge: 10
+    maxBackups: 20 

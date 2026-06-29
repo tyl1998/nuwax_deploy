@@ -1,0 +1,62 @@
+[mysqld]
+# 基本配置
+port                    = 3306
+bind-address            = 0.0.0.0
+pid-file               = /var/run/mysqld/mysqld.pid
+socket                 = /var/run/mysqld/mysqld.sock
+datadir                = /var/lib/mysql
+log-error             = /var/log/mysql/error.log
+character-set-server   = utf8mb4
+collation-server      = utf8mb4_unicode_ci
+
+# 连接配置
+max_connections         = 1000
+max_connect_errors      = 1000
+connect_timeout         = 20
+wait_timeout           = 86400
+interactive_timeout    = 86400
+net_read_timeout      = 86400
+net_write_timeout     = 86400
+thread_cache_size      = 64
+
+# 缓冲区配置
+key_buffer_size        = 32M
+max_allowed_packet     = 16M
+sort_buffer_size       = 2M
+read_buffer_size       = 2M
+read_rnd_buffer_size   = 8M
+myisam_sort_buffer_size = 64M
+tmp_table_size         = 64M
+max_heap_table_size    = 64M
+
+# InnoDB 配置
+innodb_buffer_pool_size = 256M
+innodb_redo_log_capacity = 64M
+innodb_log_buffer_size = 8M
+innodb_flush_log_at_trx_commit = 2
+innodb_lock_wait_timeout = 50
+innodb_file_per_table  = 1
+innodb_rollback_on_timeout = 1
+innodb_thread_concurrency = 0
+
+# 日志配置
+slow_query_log         = 1
+slow_query_log_file    = /var/log/mysql/slow.log
+long_query_time        = 2
+log_queries_not_using_indexes = 1
+log_slow_admin_statements = 1
+log_bin                = /var/log/mysql/mysql-bin
+binlog_expire_logs_seconds = 604800
+max_binlog_size       = 100M
+
+# 安全配置
+authentication_policy  = mysql_native_password
+host_cache_size       = 0
+
+[mysql]
+default-character-set  = utf8mb4
+
+[client]
+default-character-set  = utf8mb4
+port                  = 3306
+socket                = /var/run/mysqld/mysqld.sock
