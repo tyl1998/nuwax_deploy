@@ -1,0 +1,30 @@
+# 简化的 Elasticsearch 配置
+# 容器已经有很好的默认配置，这里只保留必要的设置
+
+# =================================== Network ====================================
+# 绑定到所有网络接口，允许外部访问
+network.host: 0.0.0.0
+http.port: 9200
+
+# =================================== Discovery ====================================
+# 单节点模式 (容器默认是 cluster.name: docker-cluster)
+discovery.type: single-node
+
+# =================================== Security ====================================
+# 启用安全特性
+xpack.security.enabled: true
+xpack.security.enrollment.enabled: true
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+
+# =================================== Monitoring ====================================
+# 启用监控
+xpack.monitoring.collection.enabled: true
+
+# =================================== Performance ====================================
+# 性能优化设置 (节点级别)
+indices.fielddata.cache.size: 30%
+
+# =================================== Logging ====================================
+# 日志级别
+logger.org.elasticsearch.discovery: WARN
