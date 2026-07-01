@@ -989,7 +989,7 @@ create table sandbox_config
     server_info  json                                 null comment '内部访问信息',
     description  varchar(500)                         null comment '配置描述',
     is_active    tinyint(1) default 1                 not null comment '是否启用：1-启用 0-禁用',
-    max_agent    int(10)    default 5                 not null comment '最大可以开多少个agent并行执行（个人客户端有效'),
+    max_agent    int(10)    default 5                 not null comment '最大可以开多少个agent并行执行（个人客户端有效）',
     type         varchar(16) default 'Agent'         not null comment '沙箱类型：Agent 智能体沙箱；PageApp 应用开发沙箱',
     bind_info    json                               null comment '关系绑定',
     isolation    varchar(16)                        null comment '隔离策略，仅页面开发有效',
